@@ -6,8 +6,8 @@ import argparse
 
 def load_preferences_with_event_structure(filepath):
     df = pd.read_csv(filepath)
-    df = df[df['activo'] == 1].reset_index(drop=True)
-    people = df['personas'].tolist()
+    df = df[df['Activo'] == 1].reset_index(drop=True)
+    people = df['Hermanos/as'].tolist()
     event_columns = df.columns[3:]
     
     # Parse event info
@@ -33,7 +33,7 @@ def load_preferences_with_event_structure(filepath):
         for i, person in enumerate(people)
     }
     
-    supervisors = df[df['superintendente'] == 1]['personas'].tolist()
+    supervisors = df[df['Superintendente'] == 1]['Hermanos/as'].tolist()
     
     return people, event_infos, limits, supervisors
 
