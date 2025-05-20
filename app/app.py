@@ -23,7 +23,7 @@ if uploaded_file and st.button("Generar asignaciones"):
         st.download_button(
             label="📥 Descargar archivo de asignaciones",
             data=csv_bytes,
-            file_name=f"asignaciones_{month:02d}_{year}.csv",
+            file_name=f"ppoc_{month:02d}_{year}.csv",
             mime="text/csv"
         )
     except Exception as e:
