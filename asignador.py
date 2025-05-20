@@ -3,14 +3,17 @@ import numpy as np
 import calendar
 import re
 import argparse
+import io
+
+# Load preferences from a CSV file and extract event metadata
 
 def load_preferences_with_event_structure(filepath):
     df = pd.read_csv(filepath)
     df = df[df['Activo'] == 1].reset_index(drop=True)
     people = df['Hermanos/as'].tolist()
-    event_columns = df.columns[3:]
-    
-    # Parse event info
+    event_columns = df.columns[3:]  # Skip name, activo, superintendente
+
+    # Parse event columns into metadata (weekday, hour, place)
     event_infos = []
     for col in event_columns:
         match = re.match(r"(\w+)\s+(\d{1,2}(?::\d{2})?h)\s+(.+)", col)
@@ -23,8 +26,8 @@ def load_preferences_with_event_structure(filepath):
                 "place": place,
             })
         else:
-            raise ValueError(f"Invalid event column format: {col}")
-    
+            raise ValueError(f"Formato de evento inválido: {col}")
+
     limits = {
         person: {
             event: (float('inf') if df.loc[i, event] == 'x' else int(df.loc[i, event]))
@@ -32,14 +35,20 @@ def load_preferences_with_event_structure(filepath):
         }
         for i, person in enumerate(people)
     }
-    
+
     supervisors = df[df['Superintendente'] == 1]['Hermanos/as'].tolist()
-    
+
     return people, event_infos, limits, supervisors
+
+
+# Return list of weeks with date objects from a given month and year
 
 def get_weeks_with_dates(month, year):
     cal = calendar.Calendar()
     return cal.monthdatescalendar(year, month)
+
+
+# Map abstract event names to actual dates based on weekday
 
 def map_event_names_to_real_dates(event_infos, weeks, month):
     day_name_map = {
@@ -47,18 +56,21 @@ def map_event_names_to_real_dates(event_infos, weeks, month):
         'jueves': 3, 'viernes': 4, 'sábado': 5, 'domingo': 6
     }
     result = []
-    
+
     for week in weeks:
         week_events = []
         for event in event_infos:
             weekday_num = day_name_map[event['weekday']]
             for day in week:
                 if day.weekday() == weekday_num and day.month == month:
-                    new_event_name = f"{event['weekday']} {day.day} {event['hour']} {event['place']}"
-                    week_events.append((event['original'], new_event_name))
+                    real_event = f"{event['weekday']} {day.day} {event['hour']} {event['place']}"
+                    week_events.append((event['original'], real_event))
                     break
         result.append(week_events)
     return result
+
+
+# Select 3 people including one supervisor from a pool
 
 def select_people_with_supervisor(available, supervisors):
     available_supervisors = [p for p in available if p in supervisors]
@@ -69,20 +81,23 @@ def select_people_with_supervisor(available, supervisors):
     chosen = [chosen_supervisor] + list(np.random.choice(rest, 2, replace=False))
     return chosen
 
+
+# Main logic to assign people to events per week
+
 def assign_events_real_dates(weeks, event_weeks, limits, supervisors):
     assignments = []
     monthly_count = {p: {e: 0 for e in limits[p]} for p in limits}
-    
+
     for week_idx, week_events in enumerate(event_weeks):
         assigned_this_week = set()
-        
+
         for original_event, real_event in week_events:
             possible = [p for p in limits if monthly_count[p][original_event] < limits[p][original_event]]
             available = [p for p in possible if p not in assigned_this_week]
             note = ""
-            
+
             selected = select_people_with_supervisor(available, supervisors)
-            
+
             if not selected:
                 available = possible
                 selected = select_people_with_supervisor(available, supervisors)
@@ -96,27 +111,50 @@ def assign_events_real_dates(weeks, event_weeks, limits, supervisors):
                     while len(selected) < 3:
                         selected.append("[vacío]")
                     note = "incompleto"
-            
+
             for person in selected:
                 if person != "[vacío]":
                     monthly_count[person][original_event] += 1
                     assigned_this_week.add(person)
-            
+
             assignments.append([real_event] + selected + [note])
-    
+
     return assignments
+
+
+# Save result to CSV file
 
 def save_assignments(assignments, output_path):
     df = pd.DataFrame(assignments, columns=["ppoc", "persona1", "persona2", "persona3", "nota"])
     df.to_csv(output_path, index=False)
     return output_path
 
+
+# Function for use in web app (e.g. Streamlit)
+
+def generate_schedule_csv(file, month: int, year: int) -> bytes:
+    preferences_df = pd.read_csv(file)
+    tmp_path = "__tmp_preferences.csv"
+    preferences_df.to_csv(tmp_path, index=False)
+    people, event_infos, limits, supervisors = load_preferences_with_event_structure(tmp_path)
+    weeks = get_weeks_with_dates(month, year)
+    event_weeks = map_event_names_to_real_dates(event_infos, weeks, month)
+    assignments = assign_events_real_dates(weeks, event_weeks, limits, supervisors)
+
+    output = io.StringIO()
+    df = pd.DataFrame(assignments, columns=["ppoc", "persona1", "persona2", "persona3", "nota"])
+    df.to_csv(output, index=False)
+    return output.getvalue().encode('utf-8')
+
+
+# Entry point for CLI usage
+
 def main():
-    parser = argparse.ArgumentParser(description="Asignador de ppoc semanal con preferencias.")
-    parser.add_argument("--month", type=int, required=True, help="Mes numérico (1-12)")
-    parser.add_argument("--year", type=int, required=True, help="Año numérico (ej. 2025)")
-    parser.add_argument("--input", type=str, required=True, help="Ruta al archivo de preferencias .csv")
-    parser.add_argument("--output", type=str, required=True, help="Ruta de salida para el archivo de respuesta .csv")
+    parser = argparse.ArgumentParser(description="Asignador semanal de salidas ppoc con preferencias")
+    parser.add_argument("--month", type=int, required=True, help="Mes (1-12)")
+    parser.add_argument("--year", type=int, required=True, help="Año (ej. 2025)")
+    parser.add_argument("--input", type=str, required=True, help="Ruta al CSV de preferencias")
+    parser.add_argument("--output", type=str, required=True, help="Ruta para guardar el CSV de resultado")
     args = parser.parse_args()
 
     people, event_infos, limits, supervisors = load_preferences_with_event_structure(args.input)
