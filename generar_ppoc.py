@@ -87,7 +87,7 @@ def assign_events_real_dates(weeks, event_weeks, limits, supervisors):
                 available = possible
                 selected = select_people_with_supervisor(available, supervisors)
                 if selected:
-                    note = "Repetido"
+                    note = "repetido"
                 else:
                     selected = []
                     sups = [p for p in available if p in supervisors]
@@ -95,7 +95,7 @@ def assign_events_real_dates(weeks, event_weeks, limits, supervisors):
                         selected.append(np.random.choice(sups))
                     while len(selected) < 3:
                         selected.append("[vacío]")
-                    note = "Incompleto"
+                    note = "incompleto"
             
             for person in selected:
                 if person != "[vacío]":
