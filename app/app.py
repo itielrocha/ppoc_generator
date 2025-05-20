@@ -1,31 +1,30 @@
 import streamlit as st
+from datetime import datetime
+from io import BytesIO
 import pandas as pd
-import io
-from generator import generate_schedule_csv  # Tu función principal
+from main import generate_schedule_csv  # asegúrate de que el script principal se llama main.py
 
-st.set_page_config(page_title="Asignador Semanal PPOC", layout="centered")
-st.title("📅 Generador de Asignaciones Semanales PPOC")
+st.set_page_config(page_title="Asignador de ppoc", page_icon="📅")
 
-st.markdown("""
-Sube tu archivo de **preferencias.csv**, elige el **mes** y el **año**, y genera automáticamente las asignaciones.
-""")
+st.title("📅 Asignador de ppoc semanal")
+st.write("Carga tus preferencias y elige el mes y año para generar las asignaciones.")
 
-uploaded_file = st.file_uploader("Selecciona tu archivo preferencias.csv", type=["csv"])
+uploaded_file = st.file_uploader("Sube tu archivo de preferencias (.csv)", type="csv")
 col1, col2 = st.columns(2)
 with col1:
-    month = st.number_input("Mes", min_value=1, max_value=12, value=5, step=1)
+    year = st.number_input("Año", min_value=2023, max_value=2100, step=1, value=datetime.now().year)
 with col2:
-    year = st.number_input("Año", min_value=2024, value=2025, step=1)
+    month = st.selectbox("Mes", options=list(range(1, 13)), format_func=lambda x: datetime(1900, x, 1).strftime('%B'))
 
 if uploaded_file and st.button("Generar asignaciones"):
     try:
         csv_bytes = generate_schedule_csv(uploaded_file, month, year)
         st.success("Asignaciones generadas correctamente.")
         st.download_button(
-            label="📥 Descargar respuesta.csv",
+            label="📥 Descargar archivo de asignaciones",
             data=csv_bytes,
-            file_name="respuesta.csv",
+            file_name=f"asignaciones_{month:02d}_{year}.csv",
             mime="text/csv"
         )
     except Exception as e:
-        st.error(f"Ocurrió un error: {e}")
+        st.error(f"Error al generar las asignaciones: {e}")
