@@ -24,7 +24,7 @@ Este script en Python genera asignaciones semanales entre hermanos y salidas de 
 
 El archivo debe tener la siguiente estructura:
 
-| personas | superintendente | activo | lunes 10h palma | viernes 19h alcúdia | ... |
+| Hermanos/as | Superintendente | Activo | Lunes 10h Pollensa | Sábado 19h Alcúdia | ... |
 |----------|------------------|--------|------------------|----------------------|-----|
 | juan     | 1                | 1      | x                | 2                    |
 | laura    | 0                | 1      | 1                | 0                    |
@@ -33,8 +33,8 @@ El archivo debe tener la siguiente estructura:
 - `"x"`: Puede asistir todas las veces que se repita ese evento en el mes.
 - `"0"`: No puede asistir a ese evento en todo el mes.
 - Número: Máximo número de veces que puede asistir a ese evento en el mes.
-- `"superintendente"`: 1 si lo es, 0 si no.
-- `"activo"`: 1 si debe asignarse, 0 si se ignora.
+- `"Superintendente"`: 1 si lo es, 0 si no.
+- `"Activo"`: 1 si debe asignarse, 0 si se ignora.
 
 ---
 
