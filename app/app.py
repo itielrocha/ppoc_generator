@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import io
-from asignador import generate_schedule_csv  # Tu función principal
+from generator import generate_schedule_csv  # Tu función principal
 
 st.set_page_config(page_title="Asignador Semanal PPOC", layout="centered")
 st.title("📅 Generador de Asignaciones Semanales PPOC")
