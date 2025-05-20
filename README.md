@@ -1,4 +1,4 @@
-# 📅 Generador de Asignaciones Semanales
+# 📅 Generador de Asignaciones Semanales PPOC
 
 Este script en Python genera asignaciones semanales entre hermanos y salidas de ppoc tomando en cuenta sus preferencias y restricciones mensuales.
 
