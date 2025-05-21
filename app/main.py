@@ -28,13 +28,18 @@ def load_preferences_with_event_structure(filepath):
         else:
             raise ValueError(f"Formato de evento inválido: {col}")
 
-    limits = {
-        person: {
-            event: (float('inf') if df.loc[i, event] == 'x' else int(df.loc[i, event]))
-            for event in event_columns
-        }
-        for i, person in enumerate(people)
-    }
+    limits = {}
+    for i, person in enumerate(people):
+        person_limits = {}
+        for event in event_columns:
+            value = df.loc[i, event]
+            if pd.isna(value):
+                person_limits[event] = 0
+            elif str(value).strip().lower() == 'x':
+                person_limits[event] = float('inf')
+            else:
+                person_limits[event] = int(value)
+        limits[person] = person_limits
 
     supervisors = df[df['Superintendente'] == 1]['Hermanos/as'].tolist()
 
@@ -102,7 +107,11 @@ def assign_events_real_dates(weeks, event_weeks, limits, supervisors):
                 available = possible
                 selected = select_people_with_supervisor(available, supervisors)
                 if selected:
-                    note = "repetido"
+                    repetidos = [p for p in selected if p in assigned_this_week]
+                    if repetidos:
+                        note = "repetido: " + ", ".join(repetidos)
+                    else:
+                        note = ""
                 else:
                     selected = []
                     sups = [p for p in available if p in supervisors]
