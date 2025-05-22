@@ -21,7 +21,7 @@ def load_preferences_with_event_structure(filepath):
             weekday_str, hour, place = match.groups()
             event_infos.append({
                 "original": col,
-                "weekday": weekday_str.lower(),
+                "weekday": weekday_str,
                 "hour": hour,
                 "place": place,
             })
@@ -57,8 +57,8 @@ def get_weeks_with_dates(month, year):
 
 def map_event_names_to_real_dates(event_infos, weeks, month):
     day_name_map = {
-        'lunes': 0, 'martes': 1, 'miércoles': 2,
-        'jueves': 3, 'viernes': 4, 'sábado': 5, 'domingo': 6
+        'Lunes': 0, 'Martes': 1, 'Miércoles': 2,
+        'Jueves': 3, 'Viernes': 4, 'Sábado': 5, 'Domingo': 6
     }
     result = []
 
