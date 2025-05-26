@@ -6,7 +6,7 @@ from main import generate_schedule_csv  # asegúrate de que el script principal 
 
 st.set_page_config(page_title="Asignador de ppoc", page_icon="📅")
 
-st.title("📅 Asignador de ppoc semanal")
+st.title("📅 Asignador de ppoc mensual")
 st.write("Carga tus preferencias y elige el mes y año para generar las asignaciones.")
 
 uploaded_file = st.file_uploader("Sube tu archivo de preferencias (.csv)", type="csv")
