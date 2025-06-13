@@ -2,8 +2,8 @@ import streamlit as st
 from datetime import datetime
 from io import BytesIO
 import pandas as pd
-from assignments import generate_schedule_csv
-from clean import transform_csv_form
+from assign import generate_schedule_csv
+from format import transform_csv_form
 
 st.set_page_config(page_title="Asignador de ppoc", page_icon="📅")
 
