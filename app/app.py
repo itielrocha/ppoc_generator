@@ -2,7 +2,8 @@ import streamlit as st
 from datetime import datetime
 from io import BytesIO
 import pandas as pd
-from main import generate_schedule_csv  # asegúrate de que el script principal se llama main.py
+from assignments import generate_schedule_csv
+from clean import transform_csv_form
 
 st.set_page_config(page_title="Asignador de ppoc", page_icon="📅")
 
@@ -28,3 +29,19 @@ if uploaded_file and st.button("Generar asignaciones"):
         )
     except Exception as e:
         st.error(f"Error al generar las asignaciones: {e}")
+        
+st.header("🧹 Convertir respuestas del formulario a formato limpio")
+
+form_file = st.file_uploader("Sube las respuestas del formulario (.csv)", type="csv", key="formulario")
+if form_file and st.button("Convertir a formato limpio"):
+    try:
+        transformed_bytes = transform_csv_form(form_file)
+        st.success("Archivo transformado correctamente.")
+        st.download_button(
+            label="📥 Descargar archivo limpio",
+            data=transformed_bytes,
+            file_name="preferencias_limpias.csv",
+            mime="text/csv"
+        )
+    except Exception as e:
+        st.error(f"Error al transformar el archivo: {e}")
