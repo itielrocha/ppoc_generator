@@ -10,8 +10,8 @@ import io
 def load_preferences_with_event_structure(filepath):
     df = pd.read_csv(filepath)
     df = df[df['Activo'] == 1].reset_index(drop=True)
-    people = df['Hermanos/as'].tolist()
-    event_columns = df.columns[3:]  # Skip name, activo, superintendente
+    people = df['Nombre'].tolist()
+    event_columns = df.columns[4:]  # Skip nombre, hermana, superintendente, activo 
 
     # Parse event columns into metadata (weekday, hour, place)
     event_infos = []
@@ -41,17 +41,24 @@ def load_preferences_with_event_structure(filepath):
                 person_limits[event] = int(value)
         limits[person] = person_limits
 
-    supervisors = df[df['Superintendente'] == 1]['Hermanos/as'].tolist()
+    supervisors = df[df['Superintendente'] == 1]['Nombre'].tolist()
+    sisters = df[df['Hermana'] == 1]['Nombre'].tolist()
 
-    return people, event_infos, limits, supervisors
+    return people, event_infos, limits, supervisors, sisters
 
 
 # Return list of weeks with date objects from a given month and year
 
 def get_weeks_with_dates(month, year):
-    cal = calendar.Calendar()
-    return cal.monthdatescalendar(year, month)
+    cal = calendar.Calendar(firstweekday=0)  # 0 = monday
+    all_weeks = cal.monthdatescalendar(year, month)
 
+    # Filter out the first week if it does not start in the current month (i.e., if Monday is not from the month)
+    if all_weeks[0][0].month != month:
+        all_weeks = all_weeks[1:]
+
+    # The last week is already complete (Monday to Sunday) and is included even if it ends in the next month
+    return all_weeks
 
 # Map abstract event names to actual dates based on weekday
 
@@ -67,7 +74,7 @@ def map_event_names_to_real_dates(event_infos, weeks, month):
         for event in event_infos:
             weekday_num = day_name_map[event['weekday']]
             for day in week:
-                if day.weekday() == weekday_num and day.month == month:
+                if day.weekday() == weekday_num:
                     real_event = f"{event['weekday']} {day.day} {event['hour']} {event['place']}"
                     week_events.append((event['original'], real_event))
                     break
@@ -77,19 +84,32 @@ def map_event_names_to_real_dates(event_infos, weeks, month):
 
 # Select 3 people including one supervisor from a pool
 
-def select_people_with_supervisor(available, supervisors):
+def select_people_with_supervisor(available, supervisors, sisters):
     available_supervisors = [p for p in available if p in supervisors]
     if not available_supervisors or len(available) < 3:
         return None
-    chosen_supervisor = np.random.choice(available_supervisors)
-    rest = [p for p in available if p != chosen_supervisor]
-    chosen = [chosen_supervisor] + list(np.random.choice(rest, 2, replace=False))
-    return chosen
+
+    for _ in range(100):  # 100 tries to find a valid group
+        chosen_supervisor = np.random.choice(available_supervisors)
+        rest = [p for p in available if p != chosen_supervisor]
+        if len(rest) < 2:
+            continue
+        others = list(np.random.choice(rest, 2, replace=False))
+        group = [chosen_supervisor] + others
+
+        # rule: a sister must be present if there are 2 or more sisters in the group
+        sister_count = sum(1 for p in group if p in sisters)
+        if sister_count not in [0, 2, 3]:
+            continue
+
+        return group
+
+    return None
 
 
 # Main logic to assign people to events per week
 
-def assign_events_real_dates(weeks, event_weeks, limits, supervisors):
+def assign_events_real_dates(weeks, event_weeks, limits, supervisors, sisters):
     assignments = []
     monthly_count = {p: {e: 0 for e in limits[p]} for p in limits}
 
@@ -101,17 +121,15 @@ def assign_events_real_dates(weeks, event_weeks, limits, supervisors):
             available = [p for p in possible if p not in assigned_this_week]
             note = ""
 
-            selected = select_people_with_supervisor(available, supervisors)
+            selected = select_people_with_supervisor(available, supervisors, sisters)
 
             if not selected:
                 available = possible
-                selected = select_people_with_supervisor(available, supervisors)
+                selected = select_people_with_supervisor(available, supervisors, sisters)
                 if selected:
                     repetidos = [p for p in selected if p in assigned_this_week]
                     if repetidos:
                         note = "repetido: " + ", ".join(repetidos)
-                    else:
-                        note = ""
                 else:
                     selected = []
                     sups = [p for p in available if p in supervisors]
@@ -145,10 +163,10 @@ def generate_schedule_csv(file, month: int, year: int) -> bytes:
     preferences_df = pd.read_csv(file)
     tmp_path = "__tmp_preferences.csv"
     preferences_df.to_csv(tmp_path, index=False)
-    people, event_infos, limits, supervisors = load_preferences_with_event_structure(tmp_path)
+    people, event_infos, limits, supervisors, sisters = load_preferences_with_event_structure(tmp_path)
     weeks = get_weeks_with_dates(month, year)
     event_weeks = map_event_names_to_real_dates(event_infos, weeks, month)
-    assignments = assign_events_real_dates(weeks, event_weeks, limits, supervisors)
+    assignments = assign_events_real_dates(weeks, event_weeks, limits, supervisors, sisters)
 
     output = io.StringIO()
     df = pd.DataFrame(assignments, columns=["ppoc", "persona1", "persona2", "persona3", "nota"])
@@ -166,10 +184,10 @@ def main():
     parser.add_argument("--output", type=str, required=True, help="Ruta para guardar el CSV de resultado")
     args = parser.parse_args()
 
-    people, event_infos, limits, supervisors = load_preferences_with_event_structure(args.input)
+    people, event_infos, limits, supervisors, sisters = load_preferences_with_event_structure(args.input)
     weeks = get_weeks_with_dates(args.month, args.year)
     event_weeks = map_event_names_to_real_dates(event_infos, weeks, args.month)
-    assignments = assign_events_real_dates(weeks, event_weeks, limits, supervisors)
+    assignments = assign_events_real_dates(weeks, event_weeks, limits, supervisors, sisters)
     save_assignments(assignments, args.output)
 
 if __name__ == "__main__":

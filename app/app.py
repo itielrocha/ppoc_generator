@@ -1,3 +1,4 @@
+# Commmand to run the app: streamlit run app.py --server.port=8080
 import streamlit as st
 from datetime import datetime
 from io import BytesIO
